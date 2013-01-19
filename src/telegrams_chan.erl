@@ -7,13 +7,13 @@
          code_change/3]).
 
 
-chan(_Name) ->
-    case whereis(channel) of
-        undefined ->
-            {ok, Chan} = gen_server:start_link(?MODULE, [], []),
-            register(channel, Chan),
+chan(Name) ->
+    case ets:lookup(telegrams_channels, Name) of
+        [{Name, Chan}] ->
             {ok, Chan};
-        Chan ->
+        [] ->
+            {ok, Chan} = gen_server:start_link(?MODULE, [], []),
+            ets:insert(telegrams_channels, {Name, Chan}),
             {ok, Chan}
     end.
 
