@@ -5,6 +5,7 @@
 
 
 start(_StartType, _StartArgs) ->
+    net_adm:world(),
     ets:new(telegrams_channels, [set, public, named_table]),
     Dispatch = [{'_', [{['...'], telegrams_api, []}]}],
     cowboy:start_http(telegrams_listener, 100,
