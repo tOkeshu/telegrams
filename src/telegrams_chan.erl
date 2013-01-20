@@ -28,6 +28,9 @@ find(Name) ->
 push(Chan, Event) ->
     gen_server:call(Chan, {push, Event}).
 
+forward(Chan, Event) ->
+    gen_server:cast(Chan, {forward, Event}).
+
 subscribe(Chan, Subscriber) ->
     gen_server:call(Chan, {subscribe, Subscriber}).
 
@@ -47,6 +50,9 @@ handle_call({push, Event}, _From, Subscribers) ->
 handle_call({subscribe, Subscriber}, _From, Subscribers) ->
     {reply, ok, [Subscriber|Subscribers]}.
 
+handle_cast({forward, Event}, {Subscribers, Remotes}) ->
+    [Subscriber ! {event, Event} || Subscriber <- Subscribers],
+    {noreply, {Subscribers, Remotes}};
 handle_cast({bind, Remote}, {Subscribers, Remotes}) ->
     {noreply, {Subscribers, [Remote|Remotes]}};
 handle_cast(_, State) ->
