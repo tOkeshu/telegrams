@@ -44,11 +44,12 @@ init(Name) ->
     [bind(Remote, self()) || Remote <- Remotes],
     {ok, {[], Remotes}}.
 
-handle_call({push, Event}, _From, Subscribers) ->
+handle_call({push, Event}, _From, {Subscribers, Remotes}) ->
+    [forward(Chan, Event) || Chan <- Remotes],
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
-    {reply, ok, Subscribers};
-handle_call({subscribe, Subscriber}, _From, Subscribers) ->
-    {reply, ok, [Subscriber|Subscribers]}.
+    {reply, ok, {Subscribers, Remotes}};
+handle_call({subscribe, Subscriber}, _From, {Subscribers, Remotes}) ->
+    {reply, ok, {[Subscriber|Subscribers], Remotes}}.
 
 handle_cast({forward, Event}, {Subscribers, Remotes}) ->
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
