@@ -31,9 +31,15 @@ push(Chan, Event) ->
 subscribe(Chan, Subscriber) ->
     gen_server:call(Chan, {subscribe, Subscriber}).
 
+bind(Chan, Remote) ->
+    gen_server:cast(Chan, {bind, Remote}).
 
-init([]) ->
-    {ok, []}.
+
+init(Name) ->
+    {Values, _BadNodes} = rpc:multicall(nodes(), telegrams_chan, find, [Name]),
+    Remotes = [Chan || {ok, Chan} <- Values],
+    [bind(Remote, self()) || Remote <- Remotes],
+    {ok, {[], Remotes}}.
 
 handle_call({push, Event}, _From, Subscribers) ->
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
@@ -41,6 +47,8 @@ handle_call({push, Event}, _From, Subscribers) ->
 handle_call({subscribe, Subscriber}, _From, Subscribers) ->
     {reply, ok, [Subscriber|Subscribers]}.
 
+handle_cast({bind, Remote}, {Subscribers, Remotes}) ->
+    {noreply, {Subscribers, [Remote|Remotes]}};
 handle_cast(_, State) ->
     {noreply, State}.
 
