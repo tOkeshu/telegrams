@@ -1,20 +1,28 @@
 -module(telegrams_chan).
 -behaviour(gen_server).
 
--export([chan/1, push/2, subscribe/2]).
+-export([chan/1, find/1, push/2, subscribe/2]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
 
 
 chan(Name) ->
+    case find(Name) of
+        {ok, Chan} ->
+            {ok, Chan};
+        {error, not_found} ->
+            {ok, Chan} = gen_server:start_link(?MODULE, Name, []),
+            ets:insert(telegrams_channels, {Name, Chan}),
+            {ok, Chan}
+    end.
+
+find(Name) ->
     case ets:lookup(telegrams_channels, Name) of
         [{Name, Chan}] ->
             {ok, Chan};
         [] ->
-            {ok, Chan} = gen_server:start_link(?MODULE, [], []),
-            ets:insert(telegrams_channels, {Name, Chan}),
-            {ok, Chan}
+            {error, not_found}
     end.
 
 push(Chan, Event) ->
