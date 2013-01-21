@@ -1,7 +1,9 @@
 -module(telegrams_chan).
 -behaviour(gen_server).
 
--export([chan/1, find/1, push/2, subscribe/2]).
+-export([chan/1, find/1]).
+-export([push/2, forward/2]).
+-export([subscribe/2, unsubscribe/2, bind/2, unbind/2]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -32,6 +34,9 @@ forward(Chan, Event) ->
 subscribe(Chan, Subscriber) ->
     gen_server:call(Chan, {subscribe, Subscriber}).
 
+unsubscribe(Chan, Subscriber) ->
+    gen_server:call(Chan, {unsubscribe, Subscriber}).
+
 bind(Chan, Remote) ->
     gen_server:cast(Chan, {bind, Remote}).
 
@@ -55,13 +60,17 @@ handle_call({push, Event}, _From, {_Name, Subscribers, Remotes}) ->
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
     {reply, ok, {Subscribers, Remotes}};
 handle_call({subscribe, Subscriber}, _From, {_Name, Subscribers, Remotes}) ->
-    {reply, ok, {[Subscriber|Subscribers], Remotes}}.
+    {reply, ok, {[Subscriber|Subscribers], Remotes}};
+handle_call({unsubscribe, Subscriber}, _From, {_Name, Subscribers, Remotes}) ->
+    {reply, ok, {lists:delete(Subscriber, Subscribers), Remotes}}.
 
 handle_cast({forward, Event}, {_Name, Subscribers, Remotes}) ->
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
     {noreply, {Subscribers, Remotes}};
 handle_cast({bind, Remote}, {_Name, Subscribers, Remotes}) ->
     {noreply, {Subscribers, [Remote|Remotes]}};
+handle_cast({unbind, Remote}, {_Name, Subscribers, Remotes}) ->
+    {noreply, {Subscribers, lists:delete(Remote, Remotes)}};
 handle_cast(_, State) ->
     {noreply, State}.
 
