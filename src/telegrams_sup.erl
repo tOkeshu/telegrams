@@ -3,18 +3,8 @@
 
 -behaviour(supervisor).
 
-%% API
 -export([start_link/0]).
-
-%% Supervisor callbacks
 -export([init/1]).
-
-%% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
-
-%% ===================================================================
-%% API functions
-%% ===================================================================
 
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
@@ -23,6 +13,9 @@ start_link() ->
 %% Supervisor callbacks
 %% ===================================================================
 
-init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+init(_Args) ->
+     RestartStrategy = {simple_one_for_one, 10, 60},
+     ChildSpec = {channel, {gen_server, start_link, [telegrams_chan]},
+          permanent, brutal_kill, worker, [telegrams_chan]},
+     {ok, {RestartStrategy, [ChildSpec]}}.
 

@@ -12,9 +12,7 @@ chan(Name) ->
         {ok, Chan} ->
             {ok, Chan};
         {error, not_found} ->
-            {ok, Chan} = gen_server:start_link(?MODULE, Name, []),
-            ets:insert(telegrams_channels, {Name, Chan}),
-            {ok, Chan}
+            supervisor:start_child(telegrams_sup, [Name, []])
     end.
 
 find(Name) ->
@@ -37,24 +35,27 @@ subscribe(Chan, Subscriber) ->
 bind(Chan, Remote) ->
     gen_server:cast(Chan, {bind, Remote}).
 
+unbind(Chan, Remote) ->
+    gen_server:cast(Chan, {unbind, Remote}).
+
 
 init(Name) ->
-    {Values, _BadNodes} = rpc:multicall(nodes(), telegrams_chan, find, [Name]),
-    Remotes = [Chan || {ok, Chan} <- Values],
+    ets:insert(telegrams_channels, {Name, self()}),
+    Remotes = remotes(Name),
     [bind(Remote, self()) || Remote <- Remotes],
-    {ok, {[], Remotes}}.
+    {ok, {Name, [], Remotes}}.
 
-handle_call({push, Event}, _From, {Subscribers, Remotes}) ->
+handle_call({push, Event}, _From, {_Name, Subscribers, Remotes}) ->
     [forward(Chan, Event) || Chan <- Remotes],
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
     {reply, ok, {Subscribers, Remotes}};
-handle_call({subscribe, Subscriber}, _From, {Subscribers, Remotes}) ->
+handle_call({subscribe, Subscriber}, _From, {_Name, Subscribers, Remotes}) ->
     {reply, ok, {[Subscriber|Subscribers], Remotes}}.
 
-handle_cast({forward, Event}, {Subscribers, Remotes}) ->
+handle_cast({forward, Event}, {_Name, Subscribers, Remotes}) ->
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
     {noreply, {Subscribers, Remotes}};
-handle_cast({bind, Remote}, {Subscribers, Remotes}) ->
+handle_cast({bind, Remote}, {_Name, Subscribers, Remotes}) ->
     {noreply, {Subscribers, [Remote|Remotes]}};
 handle_cast(_, State) ->
     {noreply, State}.
@@ -64,8 +65,16 @@ handle_info(Msg, State) ->
     {noreply, State}.
 
 terminate(normal, _State) ->
+    ok;
+terminate(_Reason, {Name, _Subscribers, Remotes}) ->
+    ets:delete(telegrams_channels, Name),
+    [unbind(Remote, self()) || Remote <- Remotes],
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+remotes(Name) ->
+    {Values, _BadNodes} = rpc:multicall(nodes(), telegrams_chan, find, [Name]),
+    [Chan || {ok, Chan} <- Values].
 
