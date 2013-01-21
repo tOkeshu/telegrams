@@ -40,10 +40,15 @@ unbind(Chan, Remote) ->
 
 
 init(Name) ->
-    ets:insert(telegrams_channels, {Name, self()}),
-    Remotes = remotes(Name),
-    [bind(Remote, self()) || Remote <- Remotes],
-    {ok, {Name, [], Remotes}}.
+    case find(Name) of
+        {ok, Chan} ->
+            ignore;
+        _Else ->
+            ets:insert(telegrams_channels, {Name, self()}),
+            Remotes = remotes(Name),
+            [bind(Remote, self()) || Remote <- Remotes],
+            {ok, {Name, [], Remotes}}
+    end.
 
 handle_call({push, Event}, _From, {_Name, Subscribers, Remotes}) ->
     [forward(Chan, Event) || Chan <- Remotes],
