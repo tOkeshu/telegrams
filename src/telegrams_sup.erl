@@ -14,7 +14,7 @@ start_link() ->
 %% ===================================================================
 
 init(_Args) ->
-     RestartStrategy = {simple_one_for_one, 10, 60},
+     RestartStrategy = {simple_one_for_one, 10, 10},
      ChildSpec = {channel, {gen_server, start_link, [telegrams_chan]},
           permanent, brutal_kill, worker, [telegrams_chan]},
      {ok, {RestartStrategy, [ChildSpec]}}.

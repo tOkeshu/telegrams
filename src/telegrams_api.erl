@@ -20,19 +20,26 @@ dispatch(Req) ->
             publish(Channel, Req2)
     end.
 
-subscribe(Channel, Req) ->
+subscribe(Channel) ->
     {ok, Chan} = telegrams_chan:chan(Channel),
-    ok = telegrams_chan:subscribe(Chan, self()),
+    link(Chan),
+    telegrams_chan:subscribe(Chan, self()).
+subscribe(Channel, Req) ->
+    process_flag(trap_exit, true),
+    ok = subscribe(Channel),
     {ok, Req2} = cowboy_req:chunked_reply(200, Req),
-    stream(Req2).
+    stream(Channel, Req2).
 
-stream(Req) ->
+stream(Channel, Req) ->
     receive
         {event, Event} ->
             ok = cowboy_req:chunk(Event, Req),
-            stream(Req);
+            stream(Channel, Req);
+        {'EXIT', _Chan, _Reason} ->
+            subscribe(Channel),
+            stream(Channel, Req);
         _ ->
-            stream(Req)
+            stream(Channel, Req)
     end.
 
 publish(Channel, Req) ->
