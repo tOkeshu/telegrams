@@ -14,7 +14,12 @@ chan(Name) ->
         {ok, Chan} ->
             {ok, Chan};
         {error, not_found} ->
-            supervisor:start_child(telegrams_sup, [Name, []])
+            case supervisor:start_child(telegrams_sup, [Name, []]) of
+                {ok, undefined} ->
+                    find(Name);
+                {ok, Chan} ->
+                    {ok, Chan}
+            end
     end.
 
 find(Name) ->
