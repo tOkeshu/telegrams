@@ -50,6 +50,7 @@ unbind(Chan, Remote) ->
 
 
 init(Name) ->
+    process_flag(trap_exit, true),
     case find(Name) of
         {ok, Chan} ->
             ignore;
@@ -79,6 +80,8 @@ handle_cast({unbind, Remote}, {Name, Subscribers, Remotes}) ->
 handle_cast(_, State) ->
     {noreply, State}.
 
+handle_info({'EXIT', Subscriber, _Reason}, {Name, Subscribers, Remotes}) ->
+    {noreply, {Name, lists:delete(Subscriber, Subscribers), Remotes}};
 handle_info(Msg, State) ->
     io:format("Unexpected message: ~p~n",[Msg]),
     {noreply, State}.
