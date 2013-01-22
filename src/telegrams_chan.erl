@@ -55,22 +55,22 @@ init(Name) ->
             {ok, {Name, [], Remotes}}
     end.
 
-handle_call({push, Event}, _From, {_Name, Subscribers, Remotes}) ->
+handle_call({push, Event}, _From, {Name, Subscribers, Remotes}) ->
     [forward(Chan, Event) || Chan <- Remotes],
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
-    {reply, ok, {Subscribers, Remotes}};
-handle_call({subscribe, Subscriber}, _From, {_Name, Subscribers, Remotes}) ->
-    {reply, ok, {[Subscriber|Subscribers], Remotes}};
-handle_call({unsubscribe, Subscriber}, _From, {_Name, Subscribers, Remotes}) ->
-    {reply, ok, {lists:delete(Subscriber, Subscribers), Remotes}}.
+    {reply, ok, {Name, Subscribers, Remotes}};
+handle_call({subscribe, Subscriber}, _From, {Name, Subscribers, Remotes}) ->
+    {reply, ok, {Name, [Subscriber|Subscribers], Remotes}};
+handle_call({unsubscribe, Subscriber}, _From, {Name, Subscribers, Remotes}) ->
+    {reply, ok, {Name, lists:delete(Subscriber, Subscribers), Remotes}}.
 
-handle_cast({forward, Event}, {_Name, Subscribers, Remotes}) ->
+handle_cast({forward, Event}, {Name, Subscribers, Remotes}) ->
     [Subscriber ! {event, Event} || Subscriber <- Subscribers],
-    {noreply, {Subscribers, Remotes}};
-handle_cast({bind, Remote}, {_Name, Subscribers, Remotes}) ->
-    {noreply, {Subscribers, [Remote|Remotes]}};
-handle_cast({unbind, Remote}, {_Name, Subscribers, Remotes}) ->
-    {noreply, {Subscribers, lists:delete(Remote, Remotes)}};
+    {noreply, {Name, Subscribers, Remotes}};
+handle_cast({bind, Remote}, {Name, Subscribers, Remotes}) ->
+    {noreply, {Name, Subscribers, [Remote|Remotes]}};
+handle_cast({unbind, Remote}, {Name, Subscribers, Remotes}) ->
+    {noreply, {Name, Subscribers, lists:delete(Remote, Remotes)}};
 handle_cast(_, State) ->
     {noreply, State}.
 
