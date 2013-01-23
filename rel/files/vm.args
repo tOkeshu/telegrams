@@ -1,5 +1,5 @@
 ## Name of the node
--name telegrams@127.0.0.1
+-sname telegrams@127.0.0.1
 
 ## Cookie for distributed erlang
 -setcookie telegrams
