@@ -6,10 +6,11 @@
 
 start(_StartType, _StartArgs) ->
     net_adm:world(),
+    {ok, Port} = application:get_env(telegrams, port),
     ets:new(telegrams_channels, [set, public, named_table]),
     Dispatch = [{'_', [{['...'], telegrams_api, []}]}],
     cowboy:start_http(telegrams_listener, 100,
-                      [{port, 8080}], [{env, [{dispatch, Dispatch}]}]),
+                      [{port, Port}], [{env, [{dispatch, Dispatch}]}]),
     telegrams_sup:start_link().
 
 stop(_State) ->

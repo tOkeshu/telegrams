@@ -8,5 +8,5 @@
                   stdlib
                  ]},
   {mod, { telegrams, []}},
-  {env, []}
+  {env, [{port, 8353}]}
  ]}.
