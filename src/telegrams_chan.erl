@@ -52,7 +52,8 @@ unbind(Chan, Remote) ->
 init(Name) ->
     process_flag(trap_exit, true),
     case find(Name) of
-        {ok, Chan} ->
+        {ok, _Chan} ->
+            % The chan has been restarted by someone else, we fail silently.
             ignore;
         _Else ->
             ets:insert(telegrams_channels, {Name, self()}),
