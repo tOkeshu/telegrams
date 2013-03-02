@@ -27,13 +27,17 @@ subscribe(Channel) ->
 subscribe(Channel, Req) ->
     process_flag(trap_exit, true),
     ok = subscribe(Channel),
-    {ok, Req2} = cowboy_req:chunked_reply(200, Req),
+    Headers = [{<<"Content-Type">>, <<"text/event-stream">>}],
+    {ok, Req2} = cowboy_req:chunked_reply(200, Headers, Req),
     stream(Channel, Req2).
 
 stream(Channel, Req) ->
     receive
         {event, Event} ->
-            ok = cowboy_req:chunk(Event, Req),
+            SSEvent =
+                [<<"data: ">>, binary:replace(Event, <<"\n">>, <<"\ndata: ">>),
+                 <<"\n\n">>],
+            ok = cowboy_req:chunk(SSEvent, Req),
             stream(Channel, Req);
         {'EXIT', _Chan, _Reason} ->
             subscribe(Channel),
