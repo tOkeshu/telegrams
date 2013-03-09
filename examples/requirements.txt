@@ -1,0 +1,2 @@
+-e git://github.com/tOkeshu/eventsource-parser.git#egg=eventsource_parser
+-e git://github.com/tOkeshu/requests-eventsource.git#egg=requests_eventsource
