@@ -33,10 +33,8 @@ subscribe(Channel, Req) ->
 
 stream(Channel, Req) ->
     receive
-        {event, Event} ->
-            SSEvent =
-                [<<"data: ">>, binary:replace(Event, <<"\n">>, <<"\ndata: ">>),
-                 <<"\n\n">>],
+        {event, {Type, Payload}} ->
+            SSEvent = buildEvent(buildType(Type), Payload),
             ok = cowboy_req:chunk(SSEvent, Req),
             stream(Channel, Req);
         {'EXIT', _Chan, _Reason} ->
@@ -46,11 +44,18 @@ stream(Channel, Req) ->
             stream(Channel, Req)
     end.
 
+buildEvent(Type, Payload) ->
+    Payload2 = binary:replace(Payload, <<"\n">>, <<"\ndata: ">>),
+    [Type, <<"data: ">>, Payload2, <<"\n\n">>].
+buildType(undefined) -> [];
+buildType(Type) -> [<<"event: ">>, Type, <<"\n">>].
+
 publish(Channel, Req) ->
     {ok, Chan} = telegrams_chan:chan(Channel),
     {ok, Payload, Req2} = cowboy_req:body(Req),
-    ok = telegrams_chan:push(Chan, Payload),
-    cowboy_req:reply(200, [], <<>>, Req2).
+    {Type, Req3} = cowboy_req:qs_val(<<"type">>, Req2),
+    ok = telegrams_chan:push(Chan, {Type, Payload}),
+    cowboy_req:reply(200, [], <<>>, Req3).
 
 terminate(_Req, _State) ->
     ok.
